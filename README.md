@@ -94,7 +94,7 @@ docker-compose up -d
 
 ##  Schedule
 
-**Padrão:** Dia 1 de cada mês às 8h da manhã
+**Padrão:** todos os dias às 8h da manhã
 ```python
 schedule="0 8 * * *"
 ```
