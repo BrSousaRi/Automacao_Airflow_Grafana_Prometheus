@@ -10,7 +10,7 @@ Este projeto automatiza o processo de:
 3. Organização dos dados para análise
 
 ##  Arquitetura
-
+```
 ┌─────────────────┐
 │  Site RPPS      │
 │  (Selenium)     │
@@ -27,7 +27,7 @@ Este projeto automatiza o processo de:
 │  Azure Storage  │
 │  Blob Container │
 └─────────────────┘
-
+``` 
 
 ##  Tecnologias
 
@@ -38,7 +38,7 @@ Este projeto automatiza o processo de:
 - **Python 3.11** - Linguagem base
 
 ##  Estrutura do Projeto
-
+```
 MPC/
 ├── dags/
 │   └── rpps_dag.py           # DAG principal
@@ -51,7 +51,7 @@ MPC/
 ├── .env                      # Variáveis (não versionado)
 ├── .gitignore               
 └── README.md
-
+```
 
 ##  Como Executar
 
@@ -63,17 +63,17 @@ MPC/
 
 Crie as seguintes variáveis no Airflow UI (Admin → Variables):
 
-| Variável                | Descrição                                                               |
-|-------------------------|-------------------------------------------------------------------------|
-| `AZURE_TENANT_ID`       | Azure Tenant ID                                                         |
-| `AZURE_CLIENT_ID`       | Service Principal Client ID                                             |
-| `AZURE_CLIENT_SECRET`   | Service Principal Secret                                                |
-| `AZURE_STORAGE_ACCOUNT` | Nome da conta de storage (padrão: 4260900tceanalyticsdev)               |
-| `AZURE_CONTAINER_NAME`  | Nome do container (padrão: tce)                                         |
-| `AZURE_BLOB_PATH`       | Caminho no blob (padrão: 000-dado-bruto/000-fonte-externa/016-mpc-rpps) |
+| Variável | Descrição |
+|----------|-----------|
+| `AZURE_TENANT_ID` | Azure Tenant ID |
+| `AZURE_CLIENT_ID` | Service Principal Client ID |
+| `AZURE_CLIENT_SECRET` | Service Principal Secret |
+| `AZURE_STORAGE_ACCOUNT` | Nome da conta de storage (padrão: 4260900tceanalyticsdev) |
+| `AZURE_CONTAINER_NAME` | Nome do container (padrão: tce) |
+| `AZURE_BLOB_PATH` | Caminho no blob (padrão: 000-dado-bruto/000-fonte-externa/016-mpc-rpps) |
 
 ### 2. Inicie o ambiente
-
+```bash
 # Cria pastas necessárias
 mkdir -p dags logs downloads plugins
 
@@ -94,9 +94,10 @@ docker-compose up -d
 
 ##  Schedule
 
-**Padrão:** Diario às 8h da manhã
+**Padrão:** Dia 1 de cada mês às 8h da manhã
+```python
 schedule="0 8 * * *"
-
+```
 
 Para alterar, edite `dags/rpps_dag.py`.
 
@@ -116,7 +117,7 @@ Para alterar, edite `dags/rpps_dag.py`.
 ##  Monitoramento
 
 ### Logs
-
+```bash
 # Scheduler
 docker-compose logs airflow-scheduler
 
@@ -125,6 +126,7 @@ docker-compose logs airflow-webserver
 
 # Logs de uma task específica
 # Acesse via Airflow UI → DAG → Task → Logs
+```
 
 ### Status
 Acesse: http://localhost:8080/dags/rpps_download_upload/grid
@@ -134,18 +136,20 @@ docker-compose logs airflow-scheduler | grep -i error
 
 # Restart scheduler
 docker-compose restart airflow-scheduler
-
+```
 ### Erro de permissão
-
+```bash
 chmod 777 logs downloads
 docker-compose restart
+```
 
 ### Chrome/Selenium não funciona
-
+```bash
 # Rebuild com cache limpo
 docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
+```
 
 ##  Arquivos Baixados
 
@@ -161,4 +165,3 @@ O pipeline baixa os seguintes arquivos:
 - `4 - Conselho de Fiscalização.csv`
 - `6 - Forma de Gestão.csv`
 - `8 - Gestão dos Recursos.csv`
-
