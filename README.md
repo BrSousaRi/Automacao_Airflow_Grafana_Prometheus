@@ -90,7 +90,7 @@ docker-compose up -d
 
 ### 4. Execute a DAG
 1. Ative a DAG `rpps_download_upload`
-2. Trigger manual ou aguarde o schedule
+2. Trigger aguarde o schedule
 
 ##  Schedule
 
