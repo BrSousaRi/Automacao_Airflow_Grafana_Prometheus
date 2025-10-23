@@ -1,0 +1,12 @@
+# Pastas do projeto
+logs/
+downloads/
+venv/
+
+# Pasta Credenciais
+.env
+
+# Pastas Python
+__pycache__/
+*.pyc
+*.log
