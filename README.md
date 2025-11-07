@@ -1,6 +1,9 @@
-#  RPPS Data Pipeline - TCE
+#  RPPS Data Pipeline
 
 Pipeline de automamação para download e armazenamento de dados do RPPS (Regime Próprio de Previdência Social) usando Apache Airflow e Azure Storage.
+
+
+![Visão do Pipeline](dags/assets/images/Airflow - Pipeline.png)
 
 ##  Descrição
 
@@ -165,3 +168,50 @@ O pipeline baixa os seguintes arquivos:
 - `4 - Conselho de Fiscalização.csv`
 - `6 - Forma de Gestão.csv`
 - `8 - Gestão dos Recursos.csv`
+
+##  Monitoramento
+
+### Prometheus & Grafana
+O projeto utiliza Prometheus para coleta de métricas e Grafana para visualização, permitindo monitoramento em tempo real do pipeline.
+
+#### Métricas Coletadas
+- Taxa de sucesso/falha das tasks
+- Tempo de execução das DAGs
+- Uso de recursos (CPU, memória)
+- Latência de download/upload
+- Status das conexões com Azure
+
+#### Dashboards Grafana
+- **Pipeline Overview**: Visão geral do status das DAGs
+- **Task Performance**: Métricas detalhadas por task
+- **Storage Metrics**: Monitoramento do Azure Storage
+- **Resource Usage**: Uso de recursos dos containers
+
+#### Painéis de Monitoramento
+
+![Dashboard de Monitoramento](dags/assets/images/Grafana - Monitoramento.png)
+
+*Legenda: Painel Grafana — visão geral do pipeline (Prometheus + Grafana).*
+
+##### Dashboard Principal
+- **Métricas de Sistema**
+  - CPU Usage
+  - Memory Usage
+  - Network I/O
+  - Uptime
+
+- **Status dos Serviços**
+  - Estado dos containers
+  - Tempo de atividade
+  - Saúde dos serviços
+
+- **Gráficos de Performance**
+  - Uso de recursos por container
+  - Tendências de utilização
+  - Histórico de performance
+
+##### Alertas Configurados
+- CPU > 80%
+- Memória > 90%
+- Serviço Down
+- Falha na execução da DAG

@@ -224,11 +224,11 @@ def rpps_pipeline():
                 )
 
                 with open(local_path, "rb") as data:
-                    blob_client.upload_blob(data, overwrite=True)
+                    blob_client.upload_blob(data, overwrite=True, max_concurrency=4)
 
-                log(f"✓ {file_name}", "OK")
+                log(f" {file_name}", "OK")
             except Exception as e:
-                log(f"✗ Erro {file_name}: {e}", "ERRO")
+                log(f" Erro {file_name}: {e}", "ERRO")
 
         log(f"Upload concluído: {len(csv_files)} arquivos")
 

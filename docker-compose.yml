@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:14-alpine
@@ -39,7 +41,7 @@ services:
       -c "
       airflow db migrate &&
       airflow users create --username admin --password admin123 --firstname Admin --lastname User --email admin@example.com --role Admin ||
-      echo 'Admin user already exists or creation failed' &&
+      echo 'Admin user already exists' &&
       echo 'Initialization complete!'
       "
 
@@ -57,6 +59,14 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'Iqx3WE-1mXWgOGWKOxb-D3gKF3n2w2c7eGPXB4yyMAA='
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__WORKERS: 2
+      AIRFLOW__WEBSERVER__WORKER_CLASS: sync
+      AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: 120
+      # Métricas StatsD
+      AIRFLOW__METRICS__STATSD_ON: 'true'
+      AIRFLOW__METRICS__STATSD_HOST: 'statsd-exporter'
+      AIRFLOW__METRICS__STATSD_PORT: '9125'
+      AIRFLOW__METRICS__STATSD_PREFIX: 'airflow'
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -66,15 +76,17 @@ services:
     command: airflow webserver
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
     restart: always
 
   airflow-scheduler:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 768M
     build:
       context: .
       dockerfile: Dockerfile.airflow
@@ -88,6 +100,14 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'Iqx3WE-1mXWgOGWKOxb-D3gKF3n2w2c7eGPXB4yyMAA='
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      # Métricas StatsD
+      AIRFLOW__METRICS__STATSD_ON: 'true'
+      AIRFLOW__METRICS__STATSD_HOST: 'statsd-exporter'
+      AIRFLOW__METRICS__STATSD_PORT: '9125'
+      AIRFLOW__METRICS__STATSD_PREFIX: 'airflow'
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 60
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 300
+      AIRFLOW__SCHEDULER__MAX_DAGRUNS_PER_LOOP_TO_SCHEDULE: 10
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -95,12 +115,6 @@ services:
       - ./downloads:/tmp/downloads_rpps
     user: "${AIRFLOW_UID:-50000}:0"
     command: airflow scheduler
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
     restart: always
 
   airflow-triggerer:
@@ -117,6 +131,11 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
       AIRFLOW__CORE__FERNET_KEY: 'Iqx3WE-1mXWgOGWKOxb-D3gKF3n2w2c7eGPXB4yyMAA='
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      # Métricas StatsD
+      AIRFLOW__METRICS__STATSD_ON: 'true'
+      AIRFLOW__METRICS__STATSD_HOST: 'statsd-exporter'
+      AIRFLOW__METRICS__STATSD_PORT: '9125'
+      AIRFLOW__METRICS__STATSD_PREFIX: 'airflow'
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -124,13 +143,76 @@ services:
       - ./downloads:/tmp/downloads_rpps
     user: "${AIRFLOW_UID:-50000}:0"
     command: airflow triggerer
-    healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
     restart: always
+
+  # ============================================
+  # STACK DE MONITORAMENTO
+  # ============================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: always
+
+  # Coleta métricas do Airflow
+  statsd-exporter:
+    image: prom/statsd-exporter:latest
+    container_name: statsd-exporter
+    ports:
+      - "9102:9102"
+      - "9125:9125/udp"
+    command:
+      - '--statsd.mapping-config=/tmp/statsd_mapping.yml'
+    volumes:
+      - ./monitoring/statsd_mapping.yml:/tmp/statsd_mapping.yml
+    restart: always
+
+  # Métricas dos containers Docker
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: always
+
+  # Métricas do banco de dados
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://airflow:airflow@postgres:5432/airflow?sslmode=disable"
+    ports:
+      - "9187:9187"
+    restart: always
+    depends_on:
+      - postgres
 
 volumes:
   postgres-db-volume:
+  prometheus_data:
+  grafana_data:
