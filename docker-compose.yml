@@ -40,7 +40,7 @@ services:
     command: >
       -c "
       airflow db migrate &&
-      airflow users create --username admin --password admin123 --firstname Admin --lastname User --email admin@example.com --role Admin ||
+      airflow users create --username admin --password {senha} --firstname {user} --lastname User --email admin@example.com --role Admin ||
       echo 'Admin user already exists' &&
       echo 'Initialization complete!'
       "
